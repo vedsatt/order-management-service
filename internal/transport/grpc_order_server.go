@@ -2,6 +2,7 @@ package transport
 
 import (
 	"context"
+	"strings"
 
 	"gitlab.crja72.ru/golang/2025/spring/course/students/268295-aisavelev-edu.hse.ru-course-1478/internal/service"
 	api "gitlab.crja72.ru/golang/2025/spring/course/students/268295-aisavelev-edu.hse.ru-course-1478/pkg/api/test"
@@ -35,7 +36,7 @@ func (o *OrderServer) CreateOrder(ctx context.Context, in *api.CreateOrderReques
 func (o *OrderServer) GetOrder(ctx context.Context, in *api.GetOrderRequest) (*api.GetOrderResponse, error) {
 	order, err := o.service.GetOrder(ctx, in.Id)
 	if err != nil {
-		return nil, status.Error(codes.InvalidArgument, err.Error())
+		return nil, status.Error(codes.NotFound, err.Error())
 	}
 
 	resp := &api.GetOrderResponse{
@@ -47,6 +48,9 @@ func (o *OrderServer) GetOrder(ctx context.Context, in *api.GetOrderRequest) (*a
 func (o *OrderServer) UpdateOrder(ctx context.Context, in *api.UpdateOrderRequest) (*api.UpdateOrderResponse, error) {
 	updOrder, err := o.service.UpdateOrder(ctx, in.Id, in.Item, in.Quantity)
 	if err != nil {
+		if strings.Contains(err.Error(), "does not exists") {
+			return nil, status.Error(codes.NotFound, err.Error())
+		}
 		return nil, status.Error(codes.InvalidArgument, err.Error())
 	}
 
@@ -57,7 +61,10 @@ func (o *OrderServer) UpdateOrder(ctx context.Context, in *api.UpdateOrderReques
 }
 
 func (o *OrderServer) DeleteOrder(ctx context.Context, in *api.DeleteOrderRequest) (*api.DeleteOrderResponse, error) {
-	success := o.service.DeleteOrder(ctx, in.Id)
+	success, err := o.service.DeleteOrder(ctx, in.Id)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
 
 	resp := &api.DeleteOrderResponse{
 		Success: success,
@@ -66,7 +73,10 @@ func (o *OrderServer) DeleteOrder(ctx context.Context, in *api.DeleteOrderReques
 }
 
 func (o *OrderServer) ListOrders(ctx context.Context, in *api.ListOrdersRequest) (*api.ListOrdersResponse, error) {
-	orders := o.service.ListOrders(ctx)
+	orders, err := o.service.ListOrders(ctx)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
 
 	resp := &api.ListOrdersResponse{
 		Orders: orders,

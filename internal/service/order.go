@@ -15,10 +15,22 @@ type OrderService struct {
 }
 
 func New() *OrderService {
-	return &OrderService{}
+	return &OrderService{
+		orders: make(map[string]*api.Order),
+	}
 }
 
 func (s *OrderService) CreateOrder(ctx context.Context, item string, quantity int32) (string, error) {
+	select {
+	case <-ctx.Done():
+		return "", ctx.Err()
+	default:
+	}
+
+	if item == "" {
+		return "", fmt.Errorf("item cannot be empty")
+	}
+
 	if quantity <= 0 {
 		return "", fmt.Errorf("incorrect quantity: %d", quantity)
 	}
@@ -39,11 +51,17 @@ func (s *OrderService) CreateOrder(ctx context.Context, item string, quantity in
 }
 
 func (s *OrderService) GetOrder(ctx context.Context, id string) (*api.Order, error) {
+	select {
+	case <-ctx.Done():
+		return nil, ctx.Err()
+	default:
+	}
+
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
 	if _, ok := s.orders[id]; !ok {
-		return &api.Order{}, fmt.Errorf("order with id %s does not exists", id)
+		return nil, fmt.Errorf("order with id %s does not exists", id)
 	}
 
 	item := s.orders[id]
@@ -51,37 +69,62 @@ func (s *OrderService) GetOrder(ctx context.Context, id string) (*api.Order, err
 }
 
 func (s *OrderService) UpdateOrder(ctx context.Context, id string, item string, quantity int32) (*api.Order, error) {
+	select {
+	case <-ctx.Done():
+		return nil, ctx.Err()
+	default:
+	}
+
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
 	if _, ok := s.orders[id]; !ok {
-		return &api.Order{}, fmt.Errorf("order with id %s does not exists", id)
+		return nil, fmt.Errorf("order with id %s does not exists", id)
+	}
+
+	if item == "" {
+		return nil, fmt.Errorf("item cannot be empty")
 	}
 
 	if quantity <= 0 {
-		return &api.Order{}, fmt.Errorf("incorrect quantity: %d", quantity)
+		return nil, fmt.Errorf("incorrect quantity: %d", quantity)
 	}
 
-	order := s.orders[id]
-	order.Item = item
-	order.Quantity = quantity
+	order := &api.Order{
+		Id:       id,
+		Item:     item,
+		Quantity: quantity,
+	}
+	s.orders[id] = order
 
 	return order, nil
 }
 
-func (s *OrderService) DeleteOrder(ctx context.Context, id string) bool {
+func (s *OrderService) DeleteOrder(ctx context.Context, id string) (bool, error) {
+	select {
+	case <-ctx.Done():
+		return false, ctx.Err()
+	default:
+	}
+
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
 	if _, ok := s.orders[id]; !ok {
-		return false
+		return false, nil
 	}
 
 	delete(s.orders, id)
-	return true
+	return true, nil
 }
 
-func (s *OrderService) ListOrders(ctx context.Context) []*api.Order {
+func (s *OrderService) ListOrders(ctx context.Context) ([]*api.Order, error) {
+	select {
+	case <-ctx.Done():
+		return nil, ctx.Err()
+	default:
+	}
+
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
@@ -90,7 +133,7 @@ func (s *OrderService) ListOrders(ctx context.Context) []*api.Order {
 		orders = append(orders, s.orders[order])
 	}
 
-	return orders
+	return orders, nil
 }
 
 func GenerateOrderID() string {
