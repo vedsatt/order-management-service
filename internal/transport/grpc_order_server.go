@@ -4,7 +4,7 @@ import (
 	"context"
 	"strings"
 
-	"gitlab.crja72.ru/golang/2025/spring/course/students/268295-aisavelev-edu.hse.ru-course-1478/internal/service"
+	"gitlab.crja72.ru/golang/2025/spring/course/students/268295-aisavelev-edu.hse.ru-course-1478/internal/repository"
 	api "gitlab.crja72.ru/golang/2025/spring/course/students/268295-aisavelev-edu.hse.ru-course-1478/pkg/api/test"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -12,10 +12,10 @@ import (
 
 type OrderServer struct {
 	api.UnimplementedOrderServiceServer
-	service *service.OrderService
+	service *repository.OrderRepository
 }
 
-func New(srv *service.OrderService) *OrderServer {
+func NewOrderServer(srv *repository.OrderRepository) *OrderServer {
 	return &OrderServer{
 		service: srv,
 	}

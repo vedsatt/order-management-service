@@ -1,4 +1,4 @@
-package service
+package repository
 
 import (
 	"context"
@@ -9,18 +9,18 @@ import (
 	api "gitlab.crja72.ru/golang/2025/spring/course/students/268295-aisavelev-edu.hse.ru-course-1478/pkg/api/test"
 )
 
-type OrderService struct {
+type OrderRepository struct {
 	mu     sync.RWMutex
 	orders map[string]*api.Order
 }
 
-func New() *OrderService {
-	return &OrderService{
+func NewOrderRepository() *OrderRepository {
+	return &OrderRepository{
 		orders: make(map[string]*api.Order),
 	}
 }
 
-func (s *OrderService) CreateOrder(ctx context.Context, item string, quantity int32) (string, error) {
+func (s *OrderRepository) CreateOrder(ctx context.Context, item string, quantity int32) (string, error) {
 	select {
 	case <-ctx.Done():
 		return "", ctx.Err()
@@ -50,7 +50,7 @@ func (s *OrderService) CreateOrder(ctx context.Context, item string, quantity in
 	return id, nil
 }
 
-func (s *OrderService) GetOrder(ctx context.Context, id string) (*api.Order, error) {
+func (s *OrderRepository) GetOrder(ctx context.Context, id string) (*api.Order, error) {
 	select {
 	case <-ctx.Done():
 		return nil, ctx.Err()
@@ -68,7 +68,7 @@ func (s *OrderService) GetOrder(ctx context.Context, id string) (*api.Order, err
 	return item, nil
 }
 
-func (s *OrderService) UpdateOrder(ctx context.Context, id string, item string, quantity int32) (*api.Order, error) {
+func (s *OrderRepository) UpdateOrder(ctx context.Context, id string, item string, quantity int32) (*api.Order, error) {
 	select {
 	case <-ctx.Done():
 		return nil, ctx.Err()
@@ -100,7 +100,7 @@ func (s *OrderService) UpdateOrder(ctx context.Context, id string, item string, 
 	return order, nil
 }
 
-func (s *OrderService) DeleteOrder(ctx context.Context, id string) (bool, error) {
+func (s *OrderRepository) DeleteOrder(ctx context.Context, id string) (bool, error) {
 	select {
 	case <-ctx.Done():
 		return false, ctx.Err()
@@ -118,7 +118,7 @@ func (s *OrderService) DeleteOrder(ctx context.Context, id string) (bool, error)
 	return true, nil
 }
 
-func (s *OrderService) ListOrders(ctx context.Context) ([]*api.Order, error) {
+func (s *OrderRepository) ListOrders(ctx context.Context) ([]*api.Order, error) {
 	select {
 	case <-ctx.Done():
 		return nil, ctx.Err()

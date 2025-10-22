@@ -4,7 +4,7 @@ import (
 	"log"
 	"net"
 
-	"gitlab.crja72.ru/golang/2025/spring/course/students/268295-aisavelev-edu.hse.ru-course-1478/internal/service"
+	"gitlab.crja72.ru/golang/2025/spring/course/students/268295-aisavelev-edu.hse.ru-course-1478/internal/repository"
 	"gitlab.crja72.ru/golang/2025/spring/course/students/268295-aisavelev-edu.hse.ru-course-1478/internal/transport"
 	"google.golang.org/grpc"
 
@@ -17,9 +17,9 @@ const (
 
 func main() {
 	log.Printf("starting server on port %v", port)
-	orderService := service.New()
+	orderRepository := repository.NewOrderRepository()
 
-	srv := transport.New(orderService)
+	srv := transport.NewOrderServer(orderRepository)
 
 	grpcServer := grpc.NewServer()
 
