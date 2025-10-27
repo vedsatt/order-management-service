@@ -34,10 +34,10 @@ deps:
 
 help:
 	@echo "Available commands:"
-	@echo "  make build        - Собрать проект"
-	@echo " make build and run - Собрать и запустить сервер"
-	@echo "  make run          - Запустить сервер"
-	@echo "  make lint         - Проверить код линтером"
-	@echo "  make deps         - Установить зависимости"
-	@echo "  make clean        - Очистить билды"
-	@echo "  make help         - Показать эту справку"
+	@echo "  make build         - Собрать проект"
+	@echo "  make build and run - Собрать и запустить сервер"
+	@echo "  make run           - Запустить сервер"
+	@echo "  make lint          - Проверить код линтером"
+	@echo "  make deps          - Установить зависимости"
+	@echo "  make clean         - Очистить билды"
+	@echo "  make help          - Показать эту справку"
