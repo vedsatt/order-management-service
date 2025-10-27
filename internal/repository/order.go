@@ -2,10 +2,11 @@ package repository
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"sync"
-	"time"
 
+	"github.com/google/uuid"
 	api "gitlab.crja72.ru/golang/2025/spring/course/students/268295-aisavelev-edu.hse.ru-course-1478/pkg/api/test"
 )
 
@@ -20,7 +21,7 @@ func NewOrderRepository() *OrderRepository {
 	}
 }
 
-func (s *OrderRepository) CreateOrder(ctx context.Context, item string, quantity int32) (string, error) {
+func (s *OrderRepository) InsertOrder(ctx context.Context, item string, quantity int32) (string, error) {
 	select {
 	case <-ctx.Done():
 		return "", ctx.Err()
@@ -28,7 +29,7 @@ func (s *OrderRepository) CreateOrder(ctx context.Context, item string, quantity
 	}
 
 	if item == "" {
-		return "", fmt.Errorf("item cannot be empty")
+		return "", errors.New("item cannot be empty")
 	}
 
 	if quantity <= 0 {
@@ -50,7 +51,7 @@ func (s *OrderRepository) CreateOrder(ctx context.Context, item string, quantity
 	return id, nil
 }
 
-func (s *OrderRepository) GetOrder(ctx context.Context, id string) (*api.Order, error) {
+func (s *OrderRepository) SelectOrder(ctx context.Context, id string) (*api.Order, error) {
 	select {
 	case <-ctx.Done():
 		return nil, ctx.Err()
@@ -83,7 +84,7 @@ func (s *OrderRepository) UpdateOrder(ctx context.Context, id string, item strin
 	}
 
 	if item == "" {
-		return nil, fmt.Errorf("item cannot be empty")
+		return nil, errors.New("item cannot be empty")
 	}
 
 	if quantity <= 0 {
@@ -137,5 +138,5 @@ func (s *OrderRepository) ListOrders(ctx context.Context) ([]*api.Order, error) 
 }
 
 func GenerateOrderID() string {
-	return fmt.Sprintf("order%d", time.Now().UnixNano())
+	return uuid.New().String()
 }
