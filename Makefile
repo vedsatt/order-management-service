@@ -32,11 +32,21 @@ deps:
 	go mod download
 	go mod tidy
 
+grpc:
+	@echo "Generating gRPC..."
+	protoc -I . --go_out . --go-grpc_out . api/order.proto
+
+grpc_gateway:
+	@echo "Generating gRPC-Gateway..."
+	protoc -I . --grpc-gateway_out . api/order.proto 
+
 help:
 	@echo "Available commands:"
 	@echo "  make build         - Собрать проект"
-	@echo "  make build and run - Собрать и запустить сервер"
+	@echo "  make build_and_run - Собрать и запустить сервер"
 	@echo "  make run           - Запустить сервер"
+	@echo "  make grpc          - Сгенерировать gRPC"
+	@echo "  make grpc_gateway  - Сгенерировать gRPC-Gateway"
 	@echo "  make lint          - Проверить код линтером"
 	@echo "  make deps          - Установить зависимости"
 	@echo "  make clean         - Очистить билды"

@@ -2,11 +2,13 @@ package transport
 
 import (
 	"context"
+	"net"
 	"strings"
 
 	api "gitlab.crja72.ru/golang/2025/spring/course/students/268295-aisavelev-edu.hse.ru-course-1478/pkg/api/test"
 	"gitlab.crja72.ru/golang/2025/spring/course/students/268295-aisavelev-edu.hse.ru-course-1478/pkg/logger"
 	"go.uber.org/zap"
+	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -28,6 +30,19 @@ type OrderServer struct {
 func NewOrderServer(srv OrderRepository) *OrderServer {
 	return &OrderServer{
 		repository: srv,
+	}
+}
+
+func (s *OrderServer) Start(ctx context.Context, grpcServer *grpc.Server, port string) {
+	logger.GetLoggerFromCtx(ctx).Info(ctx, "starting grpc server...", zap.String("port", port))
+
+	lis, err := net.Listen("tcp", ":"+port)
+	if err != nil {
+		logger.GetLoggerFromCtx(ctx).Fatal(ctx, "failed to listen", zap.Error(err))
+	}
+
+	if err := grpcServer.Serve(lis); err != nil {
+		logger.GetLoggerFromCtx(ctx).Fatal(ctx, "failed to start grpc-server", zap.Error(err))
 	}
 }
 

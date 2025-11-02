@@ -2,7 +2,9 @@ package main
 
 import (
 	"context"
-	"net"
+	"fmt"
+	"os"
+	"os/signal"
 
 	"gitlab.crja72.ru/golang/2025/spring/course/students/268295-aisavelev-edu.hse.ru-course-1478/internal/config"
 	"gitlab.crja72.ru/golang/2025/spring/course/students/268295-aisavelev-edu.hse.ru-course-1478/internal/repository"
@@ -27,17 +29,27 @@ func main() {
 		zap.L().Error("error with creating logger", zap.Error(err))
 	}
 
-	logger.GetLoggerFromCtx(ctx).Info(ctx, "starting server", zap.String("port", cfg.GrpcPort))
 	orderRepository := repository.NewOrderRepository()
 
 	srv := transport.NewOrderServer(orderRepository)
-
 	grpcServer := grpc.NewServer(grpc.UnaryInterceptor(logger.LoggerInterceptor(ctx)))
 
 	api.RegisterOrderServiceServer(grpcServer, srv)
 
-	lis, _ := net.Listen("tcp", ":"+cfg.GrpcPort)
-	if err = grpcServer.Serve(lis); err != nil {
-		logger.GetLoggerFromCtx(ctx).Fatal(ctx, "error with starting server", zap.Error(err))
-	}
+	go srv.Start(ctx, grpcServer, cfg.GrpcPort)
+
+	go transport.StartGateway(ctx, cfg.GrpcPort, cfg.GatewayPort)
+
+	waitForGracefulShotdown(ctx, grpcServer)
+}
+
+func waitForGracefulShotdown(ctx context.Context, grpcServer *grpc.Server) {
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, os.Interrupt)
+	<-quit
+
+	logger.GetLoggerFromCtx(ctx).Info(ctx, "shutting down servers...")
+	grpcServer.GracefulStop()
+	logger.GetLoggerFromCtx(ctx).Info(ctx, "server gracefully stopped")
+	fmt.Println("Server Stopped")
 }
