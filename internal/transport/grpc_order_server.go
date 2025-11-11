@@ -2,6 +2,7 @@ package transport
 
 import (
 	"context"
+	"fmt"
 	"net"
 	"strings"
 
@@ -13,9 +14,9 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-type OrderRepository interface {
-	InsertOrder(ctx context.Context, item string, quantity int32) (string, error)
-	SelectOrder(ctx context.Context, id string) (*api.Order, error)
+type OrderService interface {
+	CreateOrder(ctx context.Context, item string, quantity int32) (string, error)
+	GetOrder(ctx context.Context, id string) (*api.Order, error)
 	UpdateOrder(ctx context.Context, id string, item string, quantity int32) (*api.Order, error)
 	DeleteOrder(ctx context.Context, id string) (bool, error)
 	ListOrders(ctx context.Context) ([]*api.Order, error)
@@ -24,26 +25,26 @@ type OrderRepository interface {
 type OrderServer struct {
 	api.UnimplementedOrderServiceServer
 
-	repository OrderRepository
+	service OrderService
 }
 
-func NewOrderServer(srv OrderRepository) *OrderServer {
+func NewOrderServer(srv OrderService) *OrderServer {
 	return &OrderServer{
-		repository: srv,
+		service: srv,
 	}
 }
 
-func (s *OrderServer) Start(ctx context.Context, grpcServer *grpc.Server, port string) {
-	logger.GetLoggerFromCtx(ctx).Info(ctx, "starting grpc server...", zap.String("port", port))
-
+func (s *OrderServer) Start(ctx context.Context, grpcServer *grpc.Server, port string) error {
 	lis, err := net.Listen("tcp", ":"+port)
 	if err != nil {
-		logger.GetLoggerFromCtx(ctx).Fatal(ctx, "failed to listen", zap.Error(err))
+		return fmt.Errorf("failed to listen: %w", err)
 	}
 
 	if err := grpcServer.Serve(lis); err != nil {
-		logger.GetLoggerFromCtx(ctx).Fatal(ctx, "failed to start grpc-server", zap.Error(err))
+		return fmt.Errorf("failed to serve: %w", err)
 	}
+
+	return nil
 }
 
 func (s *OrderServer) CreateOrder(ctx context.Context, in *api.CreateOrderRequest) (*api.CreateOrderResponse, error) {
@@ -58,7 +59,7 @@ func (s *OrderServer) CreateOrder(ctx context.Context, in *api.CreateOrderReques
 		zap.Int32("quantity", in.GetQuantity()),
 	)
 
-	id, err := s.repository.InsertOrder(ctx, in.GetItem(), in.GetQuantity())
+	id, err := s.service.CreateOrder(ctx, in.GetItem(), in.GetQuantity())
 	if err != nil {
 		log.Error(ctx, "CreateOrder failed",
 			zap.String("item", in.GetItem()),
@@ -96,7 +97,7 @@ func (s *OrderServer) GetOrder(ctx context.Context, in *api.GetOrderRequest) (*a
 		zap.String("order_id", in.GetId()),
 	)
 
-	order, err := s.repository.SelectOrder(ctx, in.GetId())
+	order, err := s.service.GetOrder(ctx, in.GetId())
 	if err != nil {
 		log.Warn(ctx, "GetOrder not found",
 			zap.String("order_id", in.GetId()),
@@ -135,7 +136,7 @@ func (s *OrderServer) UpdateOrder(ctx context.Context, in *api.UpdateOrderReques
 		zap.Int32("new_quantity", in.GetQuantity()),
 	)
 
-	updOrder, err := s.repository.UpdateOrder(ctx, in.GetId(), in.GetItem(), in.GetQuantity())
+	updOrder, err := s.service.UpdateOrder(ctx, in.GetId(), in.GetItem(), in.GetQuantity())
 	if err != nil {
 		if strings.Contains(err.Error(), "does not exists") {
 			log.Warn(ctx, "UpdateOrder not found",
@@ -180,7 +181,7 @@ func (s *OrderServer) DeleteOrder(ctx context.Context, in *api.DeleteOrderReques
 		zap.String("order_id", in.GetId()),
 	)
 
-	success, err := s.repository.DeleteOrder(ctx, in.GetId())
+	success, err := s.service.DeleteOrder(ctx, in.GetId())
 	if err != nil {
 		log.Error(ctx, "DeleteOrder failed",
 			zap.String("order_id", in.GetId()),
@@ -221,7 +222,7 @@ func (s *OrderServer) ListOrders(ctx context.Context, in *api.ListOrdersRequest)
 
 	log.Info(ctx, "ListOrders started")
 
-	orders, err := s.repository.ListOrders(ctx)
+	orders, err := s.service.ListOrders(ctx)
 	if err != nil {
 		log.Error(ctx, "ListOrders failed",
 			zap.Error(err),

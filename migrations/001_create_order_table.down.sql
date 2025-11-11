@@ -1,0 +1,3 @@
+DROP INDEX IF EXISTS idx_item;
+
+DROP TABLE IF EXISTS orders;

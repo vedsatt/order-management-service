@@ -1,0 +1,9 @@
+CREATE TABLE IF NOT EXISTS orders (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    item VARCHAR(255) NOT NULL,
+    quantity INT NOT NULL DEFAULT 1
+);
+
+CREATE INDEX IF NOT EXISTS idx_item ON orders(item);
+
+ALTER DATABASE postgres REFRESH COLLATION VERSION;
