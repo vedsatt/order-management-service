@@ -1,12 +1,14 @@
-package service
+package service_test
 
 import (
 	"context"
-	"fmt"
+	"errors"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
+	"github.com/stretchr/testify/require"
+	"gitlab.crja72.ru/golang/2025/spring/course/students/268295-aisavelev-edu.hse.ru-course-1478/internal/service"
 	api "gitlab.crja72.ru/golang/2025/spring/course/students/268295-aisavelev-edu.hse.ru-course-1478/pkg/api/test"
 )
 
@@ -24,7 +26,12 @@ func (m *MockOrderRepository) SelectOrder(ctx context.Context, id string) (*api.
 	return args.Get(0).(*api.Order), args.Error(1)
 }
 
-func (m *MockOrderRepository) UpdateOrder(ctx context.Context, id string, item string, quantity int32) (*api.Order, error) {
+func (m *MockOrderRepository) UpdateOrder(
+	ctx context.Context,
+	id string,
+	item string,
+	quantity int32,
+) (*api.Order, error) {
 	args := m.Called(ctx, id, item, quantity)
 	return args.Get(0).(*api.Order), args.Error(1)
 }
@@ -39,9 +46,9 @@ func (m *MockOrderRepository) ListOrders(ctx context.Context) ([]*api.Order, err
 	return args.Get(0).([]*api.Order), args.Error(1)
 }
 
-func initialize() (*MockOrderRepository, *OrderService, context.Context) {
+func initialize() (*MockOrderRepository, *service.OrderService, context.Context) {
 	mockRepo := new(MockOrderRepository)
-	service := NewOrderService(mockRepo)
+	service := service.NewOrderService(mockRepo)
 	ctx := context.Background()
 
 	return mockRepo, service, ctx
@@ -55,7 +62,7 @@ func TestOrderService_CreateOrder_Success(t *testing.T) {
 
 	id, err := service.CreateOrder(ctx, "laptop", 3)
 
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, "123", id)
 	mockRepo.AssertExpectations(t)
 }
@@ -64,11 +71,11 @@ func TestOrderService_CreateOrder_ValidationError(t *testing.T) {
 	mockRepo, service, ctx := initialize()
 
 	_, err := service.CreateOrder(ctx, "", int32(3))
-	assert.Error(t, err)
+	require.Error(t, err)
 	assert.Contains(t, err.Error(), "item cannot be empty")
 
 	_, err = service.CreateOrder(ctx, "laptop", 0)
-	assert.Error(t, err)
+	require.Error(t, err)
 	assert.Contains(t, err.Error(), "quantity must be positive")
 
 	mockRepo.AssertNotCalled(t, "InsertOrder")
@@ -88,7 +95,7 @@ func TestOrderService_GetOrder_Success(t *testing.T) {
 
 	order, err := service.GetOrder(ctx, "12")
 
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, expected, order)
 	mockRepo.AssertExpectations(t)
 }
@@ -97,10 +104,10 @@ func TestOrderService_GetOrder_NotFound(t *testing.T) {
 	mockRepo, service, ctx := initialize()
 
 	mockRepo.On("SelectOrder", ctx, "999").
-		Return((*api.Order)(nil), fmt.Errorf("not found"))
+		Return((*api.Order)(nil), errors.New("not found"))
 
 	order, err := service.GetOrder(ctx, "999")
-	assert.Error(t, err)
+	require.Error(t, err)
 	assert.Nil(t, order)
 
 	mockRepo.AssertExpectations(t)

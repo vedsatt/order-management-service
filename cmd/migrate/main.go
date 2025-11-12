@@ -1,9 +1,11 @@
 package main
 
 import (
+	"errors"
 	"flag"
 	"fmt"
 	"log"
+	"net"
 
 	"github.com/golang-migrate/migrate/v4"
 	_ "github.com/golang-migrate/migrate/v4/database/postgres"
@@ -24,11 +26,11 @@ func main() {
 		log.Fatalf("failed to load config: %v", err)
 	}
 
-	dsn := fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=disable",
+	addr := net.JoinHostPort(cfg.PostgresCfg.Host, cfg.PostgresCfg.Port)
+	dsn := fmt.Sprintf("postgres://%s:%s@%s/%s?sslmode=disable",
 		cfg.PostgresCfg.User,
 		cfg.PostgresCfg.Password,
-		cfg.PostgresCfg.Host,
-		cfg.PostgresCfg.Port,
+		addr,
 		cfg.PostgresCfg.DBName,
 	)
 
@@ -44,18 +46,21 @@ func main() {
 
 	switch command {
 	case "up":
-		if err := m.Up(); err != nil && err != migrate.ErrNoChange {
-			log.Fatalf("migration up failed: %v", err)
+		if err = m.Up(); err != nil && !errors.Is(err, migrate.ErrNoChange) {
+			log.Printf("migration up failed: %v", err)
+			return
 		}
 		log.Println("migration up completed successfully")
 
 	case "down":
-		if err := m.Down(); err != nil && err != migrate.ErrNoChange {
-			log.Fatalf("migration down failed: %v", err)
+		if err = m.Down(); err != nil && !errors.Is(err, migrate.ErrNoChange) {
+			log.Printf("migration down failed: %v", err)
+			return
 		}
 		log.Println("migration down completed successfully")
 
 	default:
-		log.Fatalf("unknown command: %s", command)
+		log.Printf("unknown command: %s", command)
+		return
 	}
 }

@@ -10,12 +10,12 @@ import (
 )
 
 type Config struct {
+	postgres.PostgresCfg
+	redis.RedisCfg
+
 	GrpcPort    string `env:"GRPC_PORT"    env-default:"50051"`
 	GatewayPort string `env:"GATEWAY_PORT" env-default:"8080"`
 	Environment string `env:"ENV"          env-default:"prod"`
-
-	postgres.PostgresCfg
-	redis.RedisCfg
 }
 
 func New() (*Config, error) {

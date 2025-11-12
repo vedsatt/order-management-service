@@ -2,7 +2,7 @@ package service
 
 import (
 	"context"
-	"fmt"
+	"errors"
 
 	api "gitlab.crja72.ru/golang/2025/spring/course/students/268295-aisavelev-edu.hse.ru-course-1478/pkg/api/test"
 )
@@ -27,11 +27,11 @@ func NewOrderService(repo OrderRepository) *OrderService {
 
 func (s *OrderService) CreateOrder(ctx context.Context, item string, quantity int32) (string, error) {
 	if item == "" {
-		return "", fmt.Errorf("item cannot be empty")
+		return "", errors.New("item cannot be empty")
 	}
 
 	if quantity <= 0 {
-		return "", fmt.Errorf("quantity must be positive")
+		return "", errors.New("quantity must be positive")
 	}
 
 	id, err := s.repository.InsertOrder(ctx, item, quantity)
@@ -53,11 +53,11 @@ func (s *OrderService) GetOrder(ctx context.Context, id string) (*api.Order, err
 
 func (s *OrderService) UpdateOrder(ctx context.Context, id string, item string, quantity int32) (*api.Order, error) {
 	if item == "" {
-		return nil, fmt.Errorf("item cannot be empty")
+		return nil, errors.New("item cannot be empty")
 	}
 
 	if quantity <= 0 {
-		return nil, fmt.Errorf("quantity must be positive")
+		return nil, errors.New("quantity must be positive")
 	}
 
 	order, err := s.repository.UpdateOrder(ctx, id, item, quantity)

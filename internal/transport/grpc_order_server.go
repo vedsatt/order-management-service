@@ -35,12 +35,13 @@ func NewOrderServer(srv OrderService) *OrderServer {
 }
 
 func (s *OrderServer) Start(ctx context.Context, grpcServer *grpc.Server, port string) error {
-	lis, err := net.Listen("tcp", ":"+port)
+	lc := &net.ListenConfig{}
+	lis, err := lc.Listen(ctx, "tcp", ":"+port)
 	if err != nil {
 		return fmt.Errorf("failed to listen: %w", err)
 	}
 
-	if err := grpcServer.Serve(lis); err != nil {
+	if err = grpcServer.Serve(lis); err != nil {
 		return fmt.Errorf("failed to serve: %w", err)
 	}
 

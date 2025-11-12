@@ -30,7 +30,11 @@ func New(ctx context.Context, env string) (context.Context, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer logger.Sync()
+	defer func() {
+		if err = logger.Sync(); err != nil {
+			logger.Error("failed to syncronize logger: %w", zap.Error(err))
+		}
+	}()
 
 	ctx = context.WithValue(ctx, key, &Logger{logger})
 

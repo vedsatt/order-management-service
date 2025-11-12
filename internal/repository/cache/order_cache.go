@@ -3,6 +3,7 @@ package cache
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"sync"
 	"time"
@@ -23,6 +24,10 @@ type OrdersCache struct {
 	redisClient *redis.Client
 	wg          sync.WaitGroup
 }
+
+var (
+	ErrOrderNotFound = errors.New("order not found in cache")
+)
 
 func NewOrdersCache(ctx context.Context, cfg RedisCfg) (*OrdersCache, error) {
 	client := redis.NewClient(&redis.Options{
@@ -78,8 +83,8 @@ func (c *OrdersCache) SetOrder(ctx context.Context, order *api.Order) {
 			zap.String("redis_key", order.GetId()),
 		)
 
-		ttl := time.Minute * 30
-		err = c.redisClient.Set(bgCtx, order.GetId(), data, ttl).Err()
+		const defaultTTL = time.Minute * 30
+		err = c.redisClient.Set(bgCtx, order.GetId(), data, defaultTTL).Err()
 		if err != nil {
 			log.Error(ctx, "failed to set order to redis", zap.Error(err), zap.String("id", order.GetId()))
 			return
@@ -95,11 +100,11 @@ func (c *OrdersCache) GetOrder(ctx context.Context, id string) (*api.Order, erro
 	log.Debug(ctx, "GetOrder - searching in Redis", zap.String("redis_key", id))
 
 	val, err := c.redisClient.Get(ctx, id).Bytes()
-	if err == redis.Nil {
+	if errors.Is(err, redis.Nil) {
 		log.Debug(ctx, "GetOrder - not found in Redis", zap.String("redis_key", id))
-		return nil, nil
+		return nil, ErrOrderNotFound
 	} else if err != nil {
-		return nil, fmt.Errorf("redis get: %w", err)
+		return nil, fmt.Errorf("error with cache: %w", err)
 	}
 
 	log.Debug(ctx, "GetOrder - raw data from Redis",
@@ -108,7 +113,7 @@ func (c *OrdersCache) GetOrder(ctx context.Context, id string) (*api.Order, erro
 	)
 
 	var order api.Order
-	if err := json.Unmarshal(val, &order); err != nil {
+	if err = json.Unmarshal(val, &order); err != nil {
 		return nil, fmt.Errorf("unmarshal: %w", err)
 	}
 

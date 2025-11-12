@@ -2,7 +2,9 @@ package database
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"net"
 
 	"github.com/Masterminds/squirrel"
 	"github.com/jackc/pgx/v5"
@@ -24,16 +26,16 @@ type OrdersDB struct {
 }
 
 func NewOrderDB(ctx context.Context, cfg PostgresCfg) (*OrdersDB, error) {
-	dataSource := fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=disable",
-		cfg.User, cfg.Password, cfg.Host, cfg.Port, cfg.DBName,
-	)
+	addr := net.JoinHostPort(cfg.Host, cfg.Port)
+	dataSource := fmt.Sprintf("postgres://%s:%s@%s/%s?sslmode=disable",
+		cfg.User, cfg.Password, addr, cfg.DBName)
 
 	pool, err := pgxpool.New(ctx, dataSource)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create new pool: %w", err)
 	}
 
-	if err := pool.Ping(ctx); err != nil {
+	if err = pool.Ping(ctx); err != nil {
 		pool.Close()
 		return nil, fmt.Errorf("failed to connect to database: %w", err)
 	}
@@ -84,7 +86,7 @@ func (d *OrdersDB) SelectOrder(ctx context.Context, id string) (*api.Order, erro
 	order := api.Order{}
 	err = d.db.QueryRow(ctx, query, args...).Scan(&order.Id, &order.Item, &order.Quantity)
 	if err != nil {
-		if err == pgx.ErrNoRows {
+		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, fmt.Errorf("select: order with id %s does not exists", id)
 		}
 		return nil, fmt.Errorf("select: %w", err)
@@ -108,7 +110,7 @@ func (d *OrdersDB) UpdateOrder(ctx context.Context, id string, item string, quan
 	order := &api.Order{}
 	err = d.db.QueryRow(ctx, query, args...).Scan(&order.Id, &order.Item, &order.Quantity)
 	if err != nil {
-		if err == pgx.ErrNoRows {
+		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, fmt.Errorf("select: order with id %s does not exists", id)
 		}
 		return nil, fmt.Errorf("update: %w", err)
@@ -158,7 +160,7 @@ func (d *OrdersDB) SelectOrdersList(ctx context.Context) ([]*api.Order, error) {
 	orders := make([]*api.Order, 0)
 	for rows.Next() {
 		order := &api.Order{}
-		if err := rows.Scan(&order.Id, &order.Item, &order.Quantity); err != nil {
+		if err = rows.Scan(&order.Id, &order.Item, &order.Quantity); err != nil {
 			return nil, fmt.Errorf("select: %w", err)
 		}
 
@@ -184,7 +186,7 @@ func (d *OrdersDB) SelectOrdersForCache(ctx context.Context, limit uint64) ([]*a
 	var orders []*api.Order
 	for rows.Next() {
 		order := &api.Order{}
-		if err := rows.Scan(&order.Id, &order.Item, &order.Quantity); err != nil {
+		if err = rows.Scan(&order.Id, &order.Item, &order.Quantity); err != nil {
 			return nil, err
 		}
 		orders = append(orders, order)

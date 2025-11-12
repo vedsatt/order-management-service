@@ -68,8 +68,8 @@ func (a *App) initializeComponents(ctx context.Context, cfg *config.Config) {
 	orderRepository := repository.NewOrderRepository(a.DB, a.Redis)
 	orderService := service.NewOrderService(orderRepository)
 
-	ordersLimit := uint64(500)
-	go orderRepository.WarmUpCache(ctx, ordersLimit)
+	const defaultOrdersLimit = uint64(500)
+	go orderRepository.WarmUpCache(ctx, defaultOrdersLimit)
 
 	srv := transport.NewOrderServer(orderService)
 	a.GRPCServer = grpc.NewServer(grpc.UnaryInterceptor(logger.LoggerInterceptor(ctx)))
@@ -77,7 +77,7 @@ func (a *App) initializeComponents(ctx context.Context, cfg *config.Config) {
 
 	go func() {
 		log.Info(ctx, "starting gRPC server...", zap.String("port", cfg.GrpcPort))
-		if err := srv.Start(ctx, a.GRPCServer, cfg.GrpcPort); err != nil {
+		if err = srv.Start(ctx, a.GRPCServer, cfg.GrpcPort); err != nil {
 			log.Fatal(ctx, "failed to start gRPC server", zap.Error(err))
 		}
 	}()
@@ -98,8 +98,8 @@ func (a *App) gracefulShotdown(ctx context.Context) {
 	<-quit
 	log.Info(ctx, "shutdown signl received")
 
-	shutdownTTL := time.Second * 10
-	shutdownCtx, cancel := context.WithTimeout(context.Background(), shutdownTTL)
+	const defaultShutdownTTL = time.Second * 10
+	shutdownCtx, cancel := context.WithTimeout(context.Background(), defaultShutdownTTL)
 	defer cancel()
 
 	log.Info(ctx, "shutting down gRPC server...")
@@ -107,8 +107,11 @@ func (a *App) gracefulShotdown(ctx context.Context) {
 	log.Info(ctx, "gRPC server stopped successfully")
 
 	log.Info(ctx, "shutting down gRPC gateway...")
-	a.GatewayServer.Shutdown(shutdownCtx)
-	log.Info(ctx, "gRPC gateway stopped successfully")
+	if err := a.GatewayServer.Shutdown(shutdownCtx); err != nil {
+		log.Error(ctx, "failed to shutdown gRPC gateway", zap.Error(err))
+	} else {
+		log.Info(ctx, "gRPC gateway stopped successfully")
+	}
 
 	log.Info(ctx, "waiting for background operations...")
 	done := make(chan struct{})

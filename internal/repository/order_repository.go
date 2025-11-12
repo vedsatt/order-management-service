@@ -2,6 +2,7 @@ package repository
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"gitlab.crja72.ru/golang/2025/spring/course/students/268295-aisavelev-edu.hse.ru-course-1478/internal/repository/cache"
@@ -62,10 +63,11 @@ func (r *OrderRepository) SelectOrder(ctx context.Context, id string) (*api.Orde
 	log := logger.GetLoggerFromCtx(ctx)
 
 	order, err := r.cache.GetOrder(ctx, id)
-	if err != nil {
-		log.Error(ctx, "cache error", zap.Error(err))
-	} else if order != nil {
+	if err == nil && order != nil {
 		return order, nil
+	}
+	if !errors.Is(err, cache.ErrOrderNotFound) {
+		log.Error(ctx, "cache error", zap.Error(err))
 	}
 
 	order, err = r.db.SelectOrder(ctx, id)

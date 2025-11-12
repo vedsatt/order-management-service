@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"time"
 
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 	api "gitlab.crja72.ru/golang/2025/spring/course/students/268295-aisavelev-edu.hse.ru-course-1478/pkg/api/test"
@@ -19,9 +20,11 @@ func StartGateway(ctx context.Context, grpcPort, gatewayPort string) (*http.Serv
 		return nil, fmt.Errorf("failed to register order service handler: %w", err)
 	}
 
+	const defaultGatewayTimeout = 5 * time.Second
 	server := &http.Server{
-		Addr:    ":" + gatewayPort,
-		Handler: mux,
+		Addr:              ":" + gatewayPort,
+		Handler:           mux,
+		ReadHeaderTimeout: defaultGatewayTimeout,
 	}
 
 	go func() {
