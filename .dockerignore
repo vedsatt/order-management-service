@@ -1,0 +1,17 @@
+.DS_Store
+
+Makefile
+README.md
+
+docker-compose.yaml
+Dockerfile
+.dockerignore
+
+config/.env.example
+
+.gitignore
+**/.git
+
+*_test.go
+**/testdata
+
